@@ -3,7 +3,7 @@
 一个基于百度翻译API的智能文章降重工具，通过多语言转换实现文本降重，支持多种降重模式。
 
 ```
-![这是图片](https://image-0620.oss-cn-shenzhen.aliyuncs.com/images/2025/04/08/ProgramScan_%E6%9F%A5%E9%87%8D.png "ProgramScan_查重")
+![软件界面](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E8%BD%AF%E4%BB%B6%E7%95%8C%E9%9D%A2.png "ProgramScan_查重")
 ```
 
 ## 功能特点
