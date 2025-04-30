@@ -2,9 +2,7 @@
 
 一个基于百度翻译API的智能文章降重工具，通过多语言转换实现文本降重，支持多种降重模式。
 
-```
-![软件界面](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E8%BD%AF%E4%BB%B6%E7%95%8C%E9%9D%A2.png "ProgramScan_查重")
-```
+![降重助手](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E8%BD%AF%E4%BB%B6%E7%95%8C%E9%9D%A2.png "降重助手")
 
 ## 功能特点
 
