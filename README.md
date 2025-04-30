@@ -4,6 +4,8 @@
 
 ![降重助手](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E8%BD%AF%E4%BB%B6%E7%95%8C%E9%9D%A2.png "降重助手")
 
+![效果显示](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E9%99%8D%E9%87%8D%E6%95%88%E6%9E%9C.png "效果显示")
+
 ## 功能特点
 
 - 🎯 智能降重：通过多语言转换实现文本降重
