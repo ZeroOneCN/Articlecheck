@@ -1,10 +1,15 @@
 # 文章降重助手
 
-一个基于百度翻译API的智能文章降重工具，通过多语言转换实现文本降重，支持多种降重模式。
+一个基于百度翻译API的智能文章降重工具，通过多语言转换实现文本降重与AIGC降重，支持多种降重模式。
 
 ![降重助手](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E8%BD%AF%E4%BB%B6%E7%95%8C%E9%9D%A2.png "降重助手")
 
-![效果显示](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E9%99%8D%E9%87%8D%E6%95%88%E6%9E%9C.png "效果显示")
+## 效果显示
+
+![AIGC对比](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E9%99%8D%E9%87%8D%E6%95%88%E6%9E%9C.png "AIGC对比")
+
+![查重对比](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E6%9F%A5%E9%87%8D%E5%AF%B9%E6%AF%94.png "查重对比")
+
 
 ## 功能特点
 
@@ -12,7 +17,7 @@
 - 📊 实时统计：显示字符数和词数统计
 - 🔍 文本对比：直观显示原文和降重后的差异
 - 📝 格式保持：支持宋体字体和首行缩进
-- ✔多种模式：提供初级、中级、高级三种降重模式
+- ✔ 多种模式：提供初级、中级、高级三种降重模式
 - 📋 一键操作：支持一键复制和粘贴
 - 📈 进度显示：实时显示降重进度
 - 💯 降重率计算：自动计算并显示降重效果
