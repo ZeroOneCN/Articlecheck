@@ -218,6 +218,20 @@ class TranslationAPI:
         self.max_text_length = 6000  # 最大文本长度限制
         self.segment_size = 2000  # 分段大小
         self.config_manager = ConfigManager()
+        self.is_authenticated = False
+
+    def validate_credentials(self):
+        """验证API凭证的有效性"""
+        if not self.appid or not self.appkey:
+            return False, "API凭证未配置"
+            
+        if not self.appid.isdigit():
+            return False, "APPID格式不正确"
+            
+        if len(self.appkey) < 20:
+            return False, "APPKEY格式不正确"
+            
+        return True, "验证通过"
 
     def make_md5(self, s, encoding='utf-8'):
         return md5(s.encode(encoding)).hexdigest()
@@ -258,8 +272,10 @@ class TranslationAPI:
         if not text:
             return "错误: 输入文本为空"
 
-        if not self.appid or not self.appkey:
-            return "错误: 请先配置API信息"
+        # 在每次翻译前验证API凭证
+        is_valid, msg = self.validate_credentials()
+        if not is_valid:
+            return f"错误: {msg}"
 
         # 检查总文本长度
         is_valid, error_msg = self.check_text_length(text)
@@ -289,6 +305,17 @@ class TranslationAPI:
                     response = requests.post(self.translate_url, params=payload, headers=self.headers, timeout=20)
                     response.raise_for_status()
                     result = response.json()
+                    
+                    # 检查API返回的错误码
+                    if 'error_code' in result:
+                        error_msg = f"API错误: {result.get('error_code')} - {result.get('error_msg', '未知错误')}"
+                        if result.get('error_code') in ['52001', '52002']:  # 超时错误，可以重试
+                            if attempt == retries - 1:
+                                return error_msg
+                            time.sleep(1)
+                            continue
+                        return error_msg  # 其他错误直接返回
+                        
                     if 'trans_result' in result:
                         translated_segments.append(result['trans_result'][0]['dst'])
                         break
@@ -307,8 +334,14 @@ class TranslationAPI:
 
     def set_api_info(self, appid, appkey):
         """设置API信息并保存"""
+        # 验证新的API凭证
         self.appid = appid
         self.appkey = appkey
+        is_valid, msg = self.validate_credentials()
+        if not is_valid:
+            return False
+            
+        # 保存到配置文件
         return self.config_manager.save_config(appid, appkey)
 
 
@@ -675,8 +708,19 @@ class ReduceSimilarityApp(QMainWindow):
         appid = self.appid_input.text().strip()
         appkey = self.appkey_input.text().strip()
 
+        # 验证输入格式
         if not appid or not appkey:
             QMessageBox.warning(self, '警告', '请输入APPID和APPKEY')
+            return
+        
+        # 验证APPID格式（通常为数字字符串）
+        if not appid.isdigit():
+            QMessageBox.warning(self, '警告', 'APPID格式不正确，应为纯数字')
+            return
+
+        # 验证APPKEY格式（通常为固定长度的字符串）
+        if len(appkey) < 20:  # 百度API的APPKEY通常较长
+            QMessageBox.warning(self, '警告', 'APPKEY格式不正确，长度不够')
             return
 
         # 保存API配置
@@ -684,15 +728,28 @@ class ReduceSimilarityApp(QMainWindow):
             QMessageBox.warning(self, '警告', '保存API配置失败')
             return
 
-        # 测试翻译
+        # 进行严格的API验证测试
         try:
-            result = self.translation_api.translate('测试', 'zh', 'en')
-            if result:
-                QMessageBox.information(self, '成功', 'API连接成功！配置已保存。')
-            else:
-                QMessageBox.warning(self, '失败', 'API连接失败，请检查配置')
+            # 使用特定的测试文本进行验证
+            test_text = "API验证测试"
+            result = self.translation_api.translate(test_text, 'zh', 'en')
+            
+            # 检查返回结果是否包含错误信息
+            if isinstance(result, str) and ('错误' in result or '失败' in result):
+                error_msg = result.split(': ')[-1] if ': ' in result else result
+                QMessageBox.warning(self, '验证失败', f'API验证失败：{error_msg}\n请检查APPID和APPKEY是否正确')
+                return
+                
+            # 验证翻译结果不为空且确实进行了翻译
+            if not result or result == test_text:
+                QMessageBox.warning(self, '验证失败', 'API响应异常，请检查配置是否正确')
+                return
+                
+            QMessageBox.information(self, '成功', 'API验证成功！配置已保存。')
+            
         except Exception as e:
-            QMessageBox.warning(self, '错误', f'测试失败：{str(e)}')
+            QMessageBox.warning(self, '错误', f'API验证失败：{str(e)}\n请检查网络连接和API配置')
+            return
 
     def paste_text(self):
         """粘贴剪贴板内容到输入框"""
