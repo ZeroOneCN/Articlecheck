@@ -53,7 +53,7 @@
 - API配置会自动保存到本地配置文件（config.json），下次启动无需重新配置
 - 每次翻译操作前都会验证API凭证的有效性，确保安全性
 
-![API查看](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E6%9F%A5%E9%87%8D%E5%AF%B9%E6%AF%94.png "API查看")
+![API查看](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/API%E6%9F%A5%E7%9C%8B%E6%96%B9%E5%BC%8F.png "API查看")
 
 ### 2. 降重操作
 
