@@ -112,11 +112,10 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._load_settings()
         self._restore_geometry()
-        self._refresh_secret_status()
+        self._refresh_secret_status(
+            prefix='已从旧版 config.json 迁移配置，原文件已改名 .bak。' if migrated else ''
+        )
         self._update_estimate()
-
-        if migrated:
-            self._set_status('已从旧版 config.json 迁移配置，原文件已改名为 .bak', ok=True)
 
     # ── 构建界面 ──────────────────────────────────────────
     def _build_ui(self):
@@ -301,21 +300,32 @@ class MainWindow(QMainWindow):
         if index >= 0:
             self.mode_combo.setCurrentIndex(index)
 
-        if not self.settings.has_credentials():
-            self._set_status('尚未配置凭证，点「注册账号」获取 APPID / APPKEY。', ok=False)
+    def _refresh_secret_status(self, prefix=''):
+        """状态栏合并「凭证是否就绪」与「密钥怎么存的」两件事。
 
-    def _refresh_secret_status(self):
+        旧顺序会让空配置的用户看到一句绿色的「密钥已加密」，误以为可以直接用。
+        """
         from ..infra import secret_store
+
         backend = secret_store.backend_name()
-        if backend == 'keyring':
-            self._set_status('密钥存储：系统凭据管理器（已加密）', ok=True)
-        elif backend == 'dpapi':
-            self._set_status('密钥存储：Windows DPAPI（绑定当前账户）', ok=True)
+        backend_text = {
+            'keyring': '密钥存储：系统凭据管理器（已加密）',
+            'dpapi': '密钥存储：Windows DPAPI（绑定当前账户）',
+        }.get(backend, '密钥存储未加密（仅 base64 混淆），建议 pip install keyring')
+
+        if not self.settings.has_credentials():
+            text = '尚未配置凭证，点「注册账号」获取 APPID / APPKEY。'
+            ok = False
+        elif backend == 'obfuscated':
+            text = backend_text
+            ok = False
         else:
-            self._set_status(
-                '密钥存储：未加密（仅 base64 混淆）。建议 pip install keyring。',
-                ok=False,
-            )
+            text = backend_text
+            ok = True
+
+        if prefix:
+            text = prefix + ' ' + text
+        self._set_status(text, ok)
 
     def _set_status(self, text, ok=True):
         color = '#1a7f37' if ok else '#b54708'
