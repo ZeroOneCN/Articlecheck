@@ -13,7 +13,7 @@
   顺便把「跳数」和「语言链路」摆进选项里。
 """
 
-from PyQt5.QtCore import QPoint, QPointF, QRectF, Qt, pyqtSignal
+from PyQt5.QtCore import QEvent, QPoint, QPointF, QRectF, Qt, pyqtSignal
 from PyQt5.QtGui import (QColor, QFont, QFontMetrics, QIcon, QPainter, QPen,
                         QPixmap, QTextBlockFormat, QTextCursor)
 from PyQt5.QtWidgets import (QApplication, QButtonGroup, QDialog, QFrame,
@@ -468,17 +468,32 @@ class ModeSelect(QWidget):
         above = self._button.mapToGlobal(QPoint(0, -6))
         self._popup.popup_at(below, above)
         self._button.set_open(True)
+        # 兜底：Qt.Popup 自己会抓鼠标，正常点击外部会被它吃掉并关闭；
+        # 但在某些合成事件（脚本、测试、远程桌面）下抓不住，加个过滤器保险。
+        QApplication.instance().installEventFilter(self)
 
     def _on_picked(self, index):
         self._select(index)
 
     def _on_closed(self):
+        QApplication.instance().removeEventFilter(self)
         self._button.set_open(False)
 
     def _close(self):
         if self._popup is not None and self._popup.isVisible():
             self._popup.close()
         self._button.set_open(False)
+
+    def eventFilter(self, obj, event):
+        if (event.type() == QEvent.MouseButtonPress
+                and self._popup is not None and self._popup.isVisible()):
+            point = event.globalPos()
+            inside_popup = self._popup.geometry().contains(point)
+            inside_button = self._button.rect().contains(
+                self._button.mapFromGlobal(point))
+            if not inside_popup and not inside_button:
+                self._close()
+        return False
 
 
 # ── 编辑框 ────────────────────────────────────────────────
