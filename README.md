@@ -1,18 +1,16 @@
-
-
 # 文章降重助手
 
 一个基于百度翻译API的智能文章论文降重工具，通过多语言转换实现文本论文降重与AIGC降重，支持多种降重模式。
 
-![降重助手](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E8%BD%AF%E4%BB%B6%E7%95%8C%E9%9D%A2.png "降重助手")
+![软件界面](./images/软件界面.png "软件界面")
 
 ## 效果显示
 
 维普AIGC检测
-![AIGC对比](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E9%99%8D%E9%87%8D%E6%95%88%E6%9E%9C.png "AIGC对比")
+![AIGC对比](./images/降重效果.png "AIGC对比")
 
 维普文章检测
-![查重对比](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/%E6%9F%A5%E9%87%8D%E5%AF%B9%E6%AF%94.png "查重对比")
+![查重对比](./images/查重对比.png "查重对比")
 
 ## 功能特点
 
@@ -55,7 +53,7 @@
 - API配置会自动保存到本地配置文件（config.json），下次启动无需重新配置
 - 每次翻译操作前都会验证API凭证的有效性，确保安全性
 
-![API查看](https://github.com/ZeroOneCN/Articlecheck/blob/main/image/API%E6%9F%A5%E7%9C%8B%E6%96%B9%E5%BC%8F.png "API查看")
+![API查看](./images/API查看方式.png "API查看")
 
 ### 2. 降重操作
 
@@ -99,7 +97,7 @@
 2. API使用量限制：
    
    - 标准版：每月免费5万字符
-   - 高级版：每月免费100万字符（需实名认证）
+   - 高级版：每月免费100万字符
 
 3. 使用建议：
    
