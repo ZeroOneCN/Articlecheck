@@ -16,8 +16,9 @@ import hashlib
 import sqlite3
 import threading
 import time
+from pathlib import Path
 
-from ..infra import paths
+from . import paths
 
 #: 缓存格式版本。保护逻辑或链路语义变化时递增，旧缓存自动失效。
 SCHEMA_VERSION = 'v1'
@@ -39,7 +40,7 @@ class TranslationCache:
     """线程安全的键值缓存。连接按线程懒创建。"""
 
     def __init__(self, path=None, enabled=True):
-        self.path = path or paths.cache_path()
+        self.path = Path(path) if path else paths.cache_path()
         self.enabled = enabled
         self._local = threading.local()
         self._lock = threading.Lock()

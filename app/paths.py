@@ -12,10 +12,10 @@ import os
 import sys
 from pathlib import Path
 
-from .. import APP_NAME_EN
+from . import APP_NAME_EN
 
-#: 源码目录下的 app 包根
-PACKAGE_DIR = Path(__file__).resolve().parents[1]
+#: app 包根目录（源码运行时的 ../app）
+PACKAGE_DIR = Path(__file__).resolve().parent
 
 
 def is_frozen():

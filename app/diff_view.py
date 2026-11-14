@@ -14,9 +14,10 @@ import re
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QTextBlockFormat, QTextCharFormat, QTextCursor
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QTextEdit, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QLabel, QTextEdit, QVBoxLayout, QWidget
 
 from . import theme
+from .widgets import Card
 
 #: 句子边界（含换行），切分后保留分隔符
 _UNIT = re.compile(r'(?<=[。！？；!?;])|(?<=\.)(?=\s)|(?<=\n)')
@@ -34,23 +35,22 @@ class DiffView(QWidget):
         self._build_ui()
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
 
-        header = QHBoxLayout()
-        header.setSpacing(6)
-        header.addWidget(self._swatch('#F7C6C0'))
-        header.addWidget(self._legend_text('删除（带删除线）'))
-        header.addSpacing(6)
-        header.addWidget(self._swatch('#BCE6D3'))
-        header.addWidget(self._legend_text('新增'))
-        header.addStretch()
+        card = Card('差异对比')
 
-        self.summary_label = QLabel('按句比对，差异标到字')
+        # 图例放在标题行右侧：色块比纯文字说明更容易对上眼睛刚看到的颜色
+        card.add_header_widget(self._swatch(theme.COLORS['danger_tint']))
+        card.add_header_widget(self._legend_text('删除（带删除线）'))
+        card.add_header_widget(self._spacer(8))
+        card.add_header_widget(self._swatch(theme.COLORS['success_tint']))
+        card.add_header_widget(self._legend_text('新增'))
+        card.add_header_widget(self._spacer(10))
+
+        self.summary_label = QLabel('')
         self.summary_label.setObjectName('Muted')
-        header.addWidget(self.summary_label)
-        layout.addLayout(header)
+        card.add_header_widget(self.summary_label)
 
         self.diff_text = QTextEdit()
         self.diff_text.setReadOnly(True)
@@ -60,7 +60,8 @@ class DiffView(QWidget):
             'background: {}; }}'.format(
                 theme.FONT_BODY, theme.EDITOR_PX, theme.COLORS['surface'])
         )
-        layout.addWidget(self.diff_text, 1)
+        card.add(self.diff_text, 1)
+        outer.addWidget(card, 1)
 
         self._normal = QTextCharFormat()
         self._normal.setForeground(QColor(theme.COLORS['text']))
@@ -97,6 +98,12 @@ class DiffView(QWidget):
         label.setStyleSheet('color: {}; font-size: 13px;'.format(
             theme.COLORS['muted']))
         return label
+
+    @staticmethod
+    def _spacer(width):
+        holder = QLabel('')
+        holder.setFixedWidth(width)
+        return holder
 
     # ── 渲染 ──────────────────────────────────────────────
     def _insert(self, cursor, text, char_format):
@@ -146,10 +153,9 @@ class DiffView(QWidget):
 
         self.diff_text.moveCursor(QTextCursor.Start)
         self.summary_label.setText(
-            '共 {} 处句式改动 · 按句比对，差异标到字'.format(changed)
-            if changed else '未检测到句式改动'
+            '共 {} 处句式改动'.format(changed) if changed else '未检测到改动'
         )
 
     def clear(self):
         self.diff_text.clear()
-        self.summary_label.setText('按句比对，差异标到字')
+        self.summary_label.setText('')

@@ -13,7 +13,6 @@
 
 import base64
 import ctypes
-import sys
 from ctypes import wintypes
 
 SERVICE = 'ArticleReducer'

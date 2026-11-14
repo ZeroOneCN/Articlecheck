@@ -9,8 +9,8 @@ import traceback
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from ..core import metrics, pipeline
-from ..core.errors import AppError, Cancelled
+from . import metrics, pipeline
+from .errors import AppError, Cancelled
 
 
 class TranslateWorker(QThread):

@@ -7,7 +7,7 @@
 
 ![软件界面](./images/软件界面.png "主界面")
 
-> v2.0.0 · 详见 [CHANGELOG.md](./CHANGELOG.md)
+> 当前版本 v2.0.0 · 下载见 [Releases](../../releases)
 
 ---
 
@@ -82,13 +82,15 @@ python main.py
 ## 使用步骤
 
 1. 粘贴论文正文，或点「导入 TXT」选择文件。**换行即分段，空行会保留**
-2. 选择降重模式（对照表见下方）
+2. 选择降重模式：下拉里直接标出了跳数与语言链路，不用另外查表
 3. 点「开始降重」（或 `Ctrl+Enter`），中途可点「取消」
-4. 看「差异对比」页确认改动是否合理
+4. 看「差异对比」页确认改动是否合理（`Ctrl+2` 切换页签）
    ![差异对比](./images/差异对比.png "差异对比")
 5. 「复制」或「导出」（`Ctrl+E`）拿到结果
 
 ### 模式对照
+
+![降重模式](./images/降重模式.png "降重模式")
 
 | 模式 | 链路 | 额度倍数 | 适用场景 |
 |---|---|---|---|
@@ -139,45 +141,48 @@ python main.py
 
 ## 项目结构
 
+只有一个代码包 `app`，模块按职责命名，不再按层级分子目录。
+
 ```
 main.py                 入口
-app/core/               纯 Python，零 Qt 依赖，可被 CLI / 批处理复用
-    errors.py           统一异常
+build.spec              PyInstaller 打包配置
+app/
+    __init__.py         版本号与应用元信息
+    paths.py            资源目录 / 用户数据目录（兼容单文件打包）
+    settings.py         配置文件读写与旧版迁移
+    secret_store.py     密钥存储（keyring → DPAPI → 混淆）
     segmenter.py        多语言断句、按字节分段、超长硬切
     protect.py          数字与引用标号占位符保护
-    cache.py            翻译结果缓存（SQLite）
     translator.py       百度翻译客户端（重试、限流自适应、保护、缓存）
+    cache.py            翻译结果缓存（SQLite）
     pipeline.py         降重链路编排
     metrics.py          改动率 / 保留率
     export.py           TXT / Word 导出
-app/infra/              路径、配置、密钥存储
-app/ui/                 界面层（theme 设计令牌 / widgets / diff_view / worker / main_window）
-app/resources/          图标（SVG + 多尺寸 ICO/PNG）
-tools/                  图标生成、版本信息、打包配置
-tests/                  离线自检
+    theme.py            设计令牌 + 全局 QSS
+    widgets.py          卡片 / 分段控件 / 模式下拉 / 正文编辑框
+    diff_view.py        句级 + 字级差异视图
+    worker.py           后台线程（降重、连通性测试）
+    main_window.py      主窗口
+    resources/          图标（SVG + 多尺寸 ICO/PNG）
+images/                 README 用截图
+tools/                  图标生成脚本、exe 版本信息
 ```
 
-依赖方向严格单向：`ui → infra → core`。
+依赖方向保持单向：`main_window → pipeline / translator / cache → segmenter / protect`，
+业务模块不导入 PyQt，可以单独拿去做命令行批处理。
 
 ## 开发
 
 ```bash
-# 离线自检（51 项，不联网）
-python tests/run_tests.py
-
 # 重新生成图标（改了 icon.svg 之后）
 python tools/make_icons.py
 
-# 打包 exe
+# 打包 exe → dist/ArticleReducer.exe
 python -m PyInstaller build.spec --noconfirm --clean
 ```
 
-自检覆盖断句与字节上限、占位符保护（含失效降级）、缓存、链路编排与取消、
-翻译器保护/缓存集成、导出、指标、界面构造与状态。
-
-## 更新日志
-
-见 [CHANGELOG.md](./CHANGELOG.md)。
+界面分三段：左侧配置与步骤、中间「原文 / 运行条 / 结果」、右侧对照视图。
+配色与字号集中在 `app/theme.py` 的 `COLORS` / `TYPE` 里，改一处即全局生效。
 
 ## 免责声明
 

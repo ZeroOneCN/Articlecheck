@@ -20,12 +20,13 @@ COLORS = {
     'page': '#F3F5FA',
     'surface': '#FFFFFF',
     'surface_sunken': '#F8FAFD',
+    #: 分段控件的轨道底色，比页面底略深一点才看得出「这是可切换的」
+    'track': '#E6ECF7',
 
     'border': '#E3E8F1',
     'border_strong': '#D2DAE7',
 
     'text': '#16202E',
-    'text_soft': '#44516450',
     'muted': '#77839A',
 
     'primary': '#2F5BEA',
@@ -39,6 +40,9 @@ COLORS = {
     'warn_soft': '#FCF2E2',
     'danger': '#BE3B2E',
     'danger_soft': '#FCECEA',
+    #: 差异图例用的实心色块，比 _soft 系列再深一点，缩到 12px 才看得见
+    'danger_tint': '#F7C6C0',
+    'success_tint': '#BCE6D3',
 }
 
 #: 中文界面字体。带英文回退，避免在没装雅黑的机器上退化成难看的默认字体。
@@ -166,23 +170,54 @@ QComboBox {
     border-radius: 8px;
     padding: 7px 10px;
     font-size: $fs_body;
-    min-width: 108px;
 }
-QComboBox:focus {
-    border: 1px solid $primary;
-}
-QComboBox::drop-down {
-    border: none;
-    width: 22px;
-}
-QComboBox QAbstractItemView {
+
+/* 降重模式下拉的触发按钮（箭头由控件自己画，右侧留出 30px） */
+QPushButton#ModeButton {
     background: $surface;
-    border: 1px solid $border;
+    border: 1px solid $border_strong;
     border-radius: 8px;
-    padding: 4px;
-    outline: none;
-    selection-background-color: $primary_soft;
-    selection-color: $primary;
+    padding: 8px 30px 8px 13px;
+    text-align: left;
+    font-size: $fs_body;
+    font-weight: 600;
+    color: $text;
+}
+QPushButton#ModeButton:hover {
+    border-color: #B9C8EA;
+    background: #FBFCFE;
+}
+QPushButton#ModeButton:disabled {
+    background: $surface_sunken;
+    border-color: $border;
+    color: $muted;
+}
+
+/* ── 分段切换器（替代页签）─────────────────────────────── */
+QFrame#Segmented {
+    background: $track;
+    border: 1px solid $border;
+    border-radius: 11px;
+}
+QPushButton#Segment {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 22px;
+    font-size: $fs_body;
+    color: #55637A;
+}
+QPushButton#Segment:!checked:hover {
+    background: rgba(255, 255, 255, 0.7);
+    color: $text;
+}
+QPushButton#Segment:checked {
+    background: $surface;
+    color: $primary;
+    font-weight: 600;
+}
+QPushButton#Segment:disabled {
+    color: #A7B1C2;
 }
 
 QTextEdit, QPlainTextEdit {
@@ -282,31 +317,6 @@ QProgressBar::chunk {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                 stop:0 #5C86F7, stop:1 $primary);
     border-radius: 4px;
-}
-
-/* ── 选项卡 ─────────────────────────────────────────── */
-QTabWidget::pane {
-    border: none;
-    background: transparent;
-    top: -1px;
-}
-QTabBar::tab {
-    background: transparent;
-    color: #5A6779;
-    padding: 9px 20px;
-    margin-right: 6px;
-    border-radius: 9px;
-    font-size: $fs_body;
-}
-QTabBar::tab:hover {
-    background: #E9EEF9;
-    color: $text;
-}
-QTabBar::tab:selected {
-    background: $surface;
-    color: $primary;
-    font-weight: 600;
-    border: 1px solid $border;
 }
 
 /* ── 滚动条 ─────────────────────────────────────────── */

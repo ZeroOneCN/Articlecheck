@@ -20,23 +20,20 @@ from pathlib import Path
 
 from PyQt5.QtCore import QSettings, Qt, QTimer
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame,
-                             QHBoxLayout, QLabel, QLineEdit, QMainWindow,
-                             QMessageBox, QProgressBar, QPushButton,
-                             QScrollArea, QShortcut, QTabWidget, QToolButton,
-                             QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
+                             QLabel, QLineEdit, QMainWindow, QMessageBox,
+                             QProgressBar, QPushButton, QScrollArea, QShortcut,
+                             QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 
-from .. import APP_ID, APP_NAME, APP_NAME_EN, ORG_NAME, __version__
-from ..core import export as export_mod
-from ..core import metrics, pipeline
-from ..core.cache import TranslationCache
-from ..core.translator import BaiduTranslator
-from ..infra import paths, secret_store
-from ..infra.settings import Settings
-from . import theme
+from . import APP_ID, APP_NAME, APP_NAME_EN, ORG_NAME, __version__
+from . import export as export_mod
+from . import metrics, paths, pipeline, secret_store, theme
+from .cache import TranslationCache
 from .diff_view import DiffView
-from .widgets import (AboutDialog, Card, MetricChip, RichTextEdit, StepRow,
-                      app_icon, logo_pixmap)
+from .settings import Settings
+from .translator import BaiduTranslator
+from .widgets import (AboutDialog, Card, MetricChip, ModeSelect, RichTextEdit,
+                      SegmentedControl, StepRow, app_icon, logo_pixmap)
 from .worker import ApiTestWorker, TranslateWorker
 
 STATE_COLORS = {
@@ -105,6 +102,13 @@ class MainWindow(QMainWindow):
 
         QShortcut(QKeySequence('Ctrl+Return'), self, self.start_translate)
         QShortcut(QKeySequence('Ctrl+E'), self, self.export_result)
+        QShortcut(QKeySequence('Ctrl+1'), self, lambda: self.show_view(0))
+        QShortcut(QKeySequence('Ctrl+2'), self, lambda: self.show_view(1))
+
+    def show_view(self, index):
+        """切换右侧视图，并让分段控件的选中态跟上。"""
+        self.view_switch.set_current(index)
+        self.pages.setCurrentIndex(index)
 
     # ── 构建：侧栏 ────────────────────────────────────────
     def _build_sidebar(self):
@@ -254,37 +258,23 @@ class MainWindow(QMainWindow):
         return card
 
     def _build_quota_card(self):
+        """额度说明。
+
+        原来这里还把三个模式的跳数又列了一遍，和下拉里的信息重复，
+        现在模式相关的说明只在「选择模式」的地方出现。
+        """
         card = Card('关于额度')
-        card.body.setSpacing(7)
+        card.body.setSpacing(8)
 
-        intro = QLabel('每跳都会重译全文，额度 ≈ 字数 × 跳数；命中缓存的部分不消耗额度。')
-        intro.setWordWrap(True)
-        intro.setMinimumWidth(1)
-        intro.setStyleSheet('color: {}; font-size: 13.5px;'.format(
-            theme.COLORS['muted']))
-        card.add(intro)
-
-        for mode in ('初级', '中级', '高级'):
-            hops = pipeline.hop_count(mode)
-            row = QWidget()
-            row.setToolTip(pipeline.MODE_DESC[mode])
-            row_layout = QHBoxLayout(row)
-            row_layout.setContentsMargins(0, 0, 0, 0)
-            row_layout.setSpacing(6)
-
-            name = QLabel(mode)
-            name.setStyleSheet('font-size: 14.5px; font-weight: 600;')
-            factor = QLabel('约 {} 倍字数'.format(hops))
-            factor.setStyleSheet('color: {}; font-size: 12.5px;'.format(
-                theme.COLORS['muted']))
-            tail = QLabel('{} 跳'.format(hops))
-            tail.setStyleSheet('color: {}; font-size: 12.5px;'.format(
-                theme.COLORS['primary']))
-
-            row_layout.addWidget(name)
-            row_layout.addWidget(factor, 1)
-            row_layout.addWidget(tail)
-            card.add(row)
+        for text in (
+            '每跳都会重译全文，额度 ≈ 字数 × 跳数；命中缓存的部分不消耗额度。',
+            '免费版约 1 次/秒，长文耗时随字数线性增长，进度条上方会显示当前语言。',
+        ):
+            label = QLabel(text)
+            label.setObjectName('Muted')
+            label.setWordWrap(True)
+            label.setMinimumWidth(1)
+            card.add(label)
 
         return card
 
@@ -331,12 +321,16 @@ class MainWindow(QMainWindow):
 
         layout.addLayout(self._build_metric_bar())
 
-        self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)
-        self.tabs.addTab(self._build_edit_tab(), '编辑对照')
+        self.view_switch = SegmentedControl(['编辑对照', '差异对比'])
+        self.view_switch.setToolTip('Ctrl+1 / Ctrl+2 切换')
+        layout.addWidget(self.view_switch, 0, Qt.AlignLeft)
+
         self.diff_view = DiffView()
-        self.tabs.addTab(self.diff_view, '差异对比')
-        layout.addWidget(self.tabs, 1)
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self._build_edit_tab())
+        self.pages.addWidget(self.diff_view)
+        self.view_switch.changed.connect(self.pages.setCurrentIndex)
+        layout.addWidget(self.pages, 1)
 
         layout.addLayout(self._build_status_bar())
         return main
@@ -374,7 +368,7 @@ class MainWindow(QMainWindow):
     def _build_edit_tab(self):
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 10, 0, 0)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
         layout.addWidget(self._build_input_card(), 1)
@@ -411,26 +405,30 @@ class MainWindow(QMainWindow):
 
     def _build_run_card(self):
         card = Card()
-        card.body.setSpacing(9)
+        card.body.setSpacing(10)
 
         row = QHBoxLayout()
         row.setSpacing(9)
 
         mode_label = QLabel('降重模式')
-        mode_label.setStyleSheet('font-size: 13.5px; color: {};'.format(
-            theme.COLORS['muted']))
+        mode_label.setObjectName('FieldLabel')
         row.addWidget(mode_label)
 
-        self.mode_combo = QComboBox()
-        self.mode_combo.addItems(list(pipeline.MODES.keys()))
-        self.mode_combo.currentTextChanged.connect(self._update_estimate)
-        row.addWidget(self.mode_combo)
+        self.mode_select = ModeSelect([
+            (name, pipeline.hop_count(name), pipeline.MODE_DESC[name])
+            for name in pipeline.MODES
+        ])
+        self.mode_select.currentTextChanged.connect(self._update_estimate)
+        row.addWidget(self.mode_select)
+
+        row.addSpacing(4)
 
         self.start_btn = QPushButton('开始降重')
         self.start_btn.setProperty('variant', 'primary')
         self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.setDefault(True)
         self.start_btn.setToolTip('Ctrl+Enter')
+        self.start_btn.setMinimumWidth(126)
         self.start_btn.clicked.connect(self.start_translate)
         row.addWidget(self.start_btn)
 
@@ -443,8 +441,7 @@ class MainWindow(QMainWindow):
         row.addStretch()
 
         self.estimate_label = QLabel('')
-        self.estimate_label.setStyleSheet(
-            'color: {}; font-size: 13px;'.format(theme.COLORS['muted']))
+        self.estimate_label.setObjectName('Muted')
         row.addWidget(self.estimate_label)
         card.body.addLayout(row)
 
@@ -458,12 +455,15 @@ class MainWindow(QMainWindow):
         detail_row = QHBoxLayout()
         detail_row.setSpacing(8)
 
+        # 给这一行留固定高度：文字为空时不留白，卡片会在开始/结束降重的瞬间
+        # 忽高忽低，上面两个编辑区跟着跳。
         self.progress_label = QLabel('')
-        self.progress_label.setStyleSheet(
-            'color: {}; font-size: 13px;'.format(theme.COLORS['muted']))
+        self.progress_label.setObjectName('Muted')
+        self.progress_label.setMinimumHeight(18)
         detail_row.addWidget(self.progress_label, 1)
 
         self.saving_label = QLabel('')
+        self.saving_label.setMinimumHeight(18)
         self.saving_label.setStyleSheet(
             'color: {}; font-size: 13px;'.format(theme.COLORS['success']))
         detail_row.addWidget(self.saving_label)
@@ -518,10 +518,7 @@ class MainWindow(QMainWindow):
         self.appid_edit.setText(self.settings.get_appid())
         self.appkey_edit.setText(self.settings.get_appkey())
 
-        mode = self.settings.get_mode()
-        index = self.mode_combo.findText(mode)
-        if index >= 0:
-            self.mode_combo.setCurrentIndex(index)
+        self.mode_select.set_current_text(self.settings.get_mode())
 
     def _toggle_key_visibility(self):
         if self.appkey_edit.echoMode() == QLineEdit.Password:
@@ -629,7 +626,7 @@ class MainWindow(QMainWindow):
             self.estimate_label.setText('')
             return
 
-        mode = self.mode_combo.currentText() if hasattr(self, 'mode_combo') else '初级'
+        mode = self.mode_select.current_text()
         calls = pipeline.estimate_requests(text, mode)
         chars = pipeline.estimate_chars(text, mode)
         hops = pipeline.hop_count(mode)
@@ -650,7 +647,7 @@ class MainWindow(QMainWindow):
         if not self._sync_credentials(show_error=True):
             return
 
-        mode = self.mode_combo.currentText()
+        mode = self.mode_select.current_text()
         self.settings.set_mode(mode)
 
         hops = pipeline.hop_count(mode)
@@ -694,13 +691,13 @@ class MainWindow(QMainWindow):
     def _set_busy(self, busy):
         self.start_btn.setEnabled(not busy)
         self.cancel_btn.setEnabled(busy)
-        self.mode_combo.setEnabled(not busy)
+        self.mode_select.setEnabled(not busy)
         self.save_btn.setEnabled(not busy)
         self.test_btn.setEnabled(not busy)
         self.appid_edit.setEnabled(not busy)
         self.appkey_edit.setEnabled(not busy)
         self.input_text.setReadOnly(busy)
-        self.tabs.tabBar().setEnabled(not busy)
+        self.view_switch.setEnabled(not busy)
 
     def _on_progress(self, percent, message):
         self.progress.setValue(percent)

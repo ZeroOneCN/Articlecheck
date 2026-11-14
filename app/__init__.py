@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """文章降重助手。
 
-分层约定：
+目录只有一个代码包 ``app``，模块按职责命名，不再分子包：
 
-    app.core    纯 Python，零 Qt 依赖，可被 CLI / Web 复用
-    app.infra   路径、配置、密钥、存储
-    app.ui      PyQt5 界面层，只做展示与事件转发
+    paths / settings / secret_store   环境与配置
+    segmenter / protect / translator  翻译链路的三块基石
+    pipeline / metrics / cache        编排、度量、缓存
+    export                            结果导出
+    theme / widgets / *_view / worker 界面
 
-依赖方向严格单向：ui → infra → core，core 不反向依赖任何上层。
+依赖方向保持单向：界面模块 → 业务模块 → 标准库，业务模块不导入 PyQt。
 """
 
 __version__ = '2.0.0'

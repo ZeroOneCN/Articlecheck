@@ -13,14 +13,6 @@ DOCX_SIZE_PT = 12
 DOCX_LINE_SPACING = 1.5
 
 
-def docx_available():
-    try:
-        import docx  # noqa: F401
-        return True
-    except ImportError:
-        return False
-
-
 def _split(text):
     return [line.strip() for line in (text or '').split('\n') if line.strip()]
 
