@@ -1,0 +1,18 @@
+# 旧版遗留的明文凭证文件，绝不能进版本库
+config.json
+config.json.bak
+credential.dat
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 打包
+build/
+dist/
+*.spec
+
+# 编辑器
+.idea/
+.vscode/

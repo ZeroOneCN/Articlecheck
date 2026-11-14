@@ -1,0 +1,9 @@
+# 运行必需
+PyQt5>=5.15.9
+requests>=2.31
+
+# 可选：缺失时自动降级，不影响运行
+# rapidfuzz —— 计算文本改动率，缺失时回落到 difflib 近似
+# keyring   —— 把 APPKEY 存进系统凭据管理器；缺失时 Windows 走 DPAPI
+rapidfuzz>=3.6
+keyring>=24
