@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """百度翻译 API 客户端。
 
-与旧实现的差异：
+相比 v1 的改动：
 
 * ``https`` 替代 ``http``：旧版把 appkey 和签名放在明文 HTTP 的 URL 上裸奔。
 * ``data=`` 替代 ``params=``：旧版声明 ``x-www-form-urlencoded`` 却把参数塞进
   query string，代理日志里全是密钥。
 * 复用 ``requests.Session``：旧版每段一次 TLS 握手。
-* 指数退避 + 抖动替代固定 ``sleep(1)``；命中 54003（限流）时自动降低速率并
-  长期记住，避免反复触发。
+* 指数退避 + 抖动替代固定 ``sleep(1)``；命中 54003（限流）时自动降低速率。
 * 失败抛异常，不再返回「含『错误』二字的字符串」。
+* v2.0 新增：占位符保护（见 ``protect``）与结果缓存（见 ``cache``）。
 """
 
 import random
@@ -19,6 +19,7 @@ from hashlib import md5
 
 import requests
 
+from . import protect as protect_mod
 from .errors import Cancelled, ConfigError, TranslationError
 from .segmenter import byte_len
 
@@ -46,14 +47,37 @@ RETRYABLE = frozenset({'52001', '52002', '54003', '54005'})
 RATE_LIMIT = frozenset({'54003'})
 
 
+class TranslationStats:
+    """一次运行内的统计，用于界面展示「省了多少额度」。"""
+
+    __slots__ = ('requests', 'cache_hits', 'chars_saved',
+                 'protected_tokens', 'protection_fallbacks')
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.requests = 0            #: 真正发出的网络请求数
+        self.cache_hits = 0          #: 命中缓存的块数
+        self.chars_saved = 0         #: 缓存省下的字符数
+        self.protected_tokens = 0    #: 被保护的数字 / 引用标号
+        self.protection_fallbacks = 0  #: 保护失效后重发的次数
+
+    def as_dict(self):
+        return {name: getattr(self, name) for name in self.__slots__}
+
+
 class BaiduTranslator:
     """无状态翻译客户端，一次构造多次请求。"""
 
-    def __init__(self, appid='', appkey='', *, timeout=20, max_retries=3):
+    def __init__(self, appid='', appkey='', *, timeout=20, max_retries=3,
+                 cache=None):
         self.appid = (appid or '').strip()
         self.appkey = (appkey or '').strip()
         self.timeout = timeout
         self.max_retries = max_retries
+        self.cache = cache
+        self.stats = TranslationStats()
 
         self.session = requests.Session()
         self.session.headers.update({
@@ -113,8 +137,16 @@ class BaiduTranslator:
         return md5((appid + query + salt + appkey).encode('utf-8')).hexdigest()
 
     # ── 对外 ──────────────────────────────────────────────
-    def translate(self, text, from_lang, to_lang):
+    def translate(self, text, from_lang, to_lang, *, use_cache=True,
+                  use_protect=True):
         """翻译一段文本。
+
+        Args:
+            text: 原文
+            from_lang: 源语言代码
+            to_lang: 目标语言代码
+            use_cache: 是否允许命中缓存
+            use_protect: 是否保护数字与引用标号
 
         Raises:
             ConfigError: 凭证缺失
@@ -132,11 +164,40 @@ class BaiduTranslator:
                 '单次请求 {} 字节，超过接口上限，分段逻辑有误'.format(size)
             )
 
+        if use_cache and self.cache is not None:
+            cached = self.cache.get(text, from_lang, to_lang)
+            if cached is not None:
+                self.stats.cache_hits += 1
+                self.stats.chars_saved += len(text)
+                return cached
+
+        masked, mapping = (protect_mod.protect(text) if use_protect
+                           else (text, {}))
+        result = self._request_with_retry(masked, from_lang, to_lang)
+
+        if mapping:
+            restored = protect_mod.restore(result, mapping)
+            if restored is None:
+                # 占位符被翻译器弄丢或复制了：这次结果不可信，用原文重发一次
+                self.stats.protection_fallbacks += 1
+                result = self._request_with_retry(text, from_lang, to_lang)
+            else:
+                self.stats.protected_tokens += len(mapping)
+                result = restored
+
+        if use_cache and self.cache is not None:
+            self.cache.put(text, from_lang, to_lang, result)
+
+        return result
+
+    # ── 请求与重试 ────────────────────────────────────────
+    def _request_with_retry(self, text, from_lang, to_lang):
         last_error = None
         for attempt in range(self.max_retries):
             self._check_cancel()
             self._pace()
             try:
+                self.stats.requests += 1
                 return self._request(text, from_lang, to_lang)
             except TranslationError as exc:
                 last_error = exc

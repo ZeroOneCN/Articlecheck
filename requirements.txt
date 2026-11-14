@@ -2,8 +2,9 @@
 PyQt5>=5.15.9
 requests>=2.31
 
-# 可选：缺失时自动降级，不影响运行
-# rapidfuzz —— 计算文本改动率，缺失时回落到 difflib 近似
-# keyring   —— 把 APPKEY 存进系统凭据管理器；缺失时 Windows 走 DPAPI
-rapidfuzz>=3.6
+# 强烈建议安装：缺了会自动降级，但功能会缩水
+rapidfuzz>=3.6      # 改动率计算；缺失时回落到 difflib，长文本明显变慢
+python-docx>=1.1    # 导出 Word；缺失时只能导出 TXT
+
+# 可选：把 APPKEY 存进系统凭据管理器；缺失时 Windows 走 DPAPI 加密
 keyring>=24

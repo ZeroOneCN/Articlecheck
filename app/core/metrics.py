@@ -69,8 +69,10 @@ def compare(original, translated):
         'distance': distance,
         'changed_ratio': changed,
         'retention': 1.0 - changed,
-        'len_before': len(a),
-        'len_after': len(b),
+        # 字数报原始长度，与编辑框里的「字符」统计保持一致；
+        # 距离计算仍用去空白的版本，避免换行/缩进虚增改动量。
+        'len_before': len(original or ''),
+        'len_after': len(translated or ''),
         'engine': _ENGINE,
     }
 

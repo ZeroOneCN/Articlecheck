@@ -13,11 +13,10 @@
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 
-from . import secret_store
+from . import paths, secret_store
 
 APP_NAME = 'ArticleReducer'
 CONFIG_FILENAME = 'settings.json'
@@ -27,18 +26,7 @@ DEFAULT_MODE = '初级'
 
 def config_dir():
     """用户级配置目录，跨启动稳定。"""
-    if sys.platform == 'win32':
-        base = os.getenv('APPDATA')
-        root = Path(base) if base else Path.home() / 'AppData' / 'Roaming'
-    elif sys.platform == 'darwin':
-        root = Path.home() / 'Library' / 'Application Support'
-    else:
-        base = os.getenv('XDG_CONFIG_HOME')
-        root = Path(base) if base else Path.home() / '.config'
-
-    path = root / APP_NAME
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    return paths.data_dir()
 
 
 def config_path():
@@ -47,7 +35,8 @@ def config_path():
 
 def legacy_config_candidates():
     """旧版可能把 config.json 落在这些地方。"""
-    candidates = [Path.cwd() / 'config.json', Path(__file__).resolve().parents[2] / 'config.json']
+    candidates = [Path.cwd() / 'config.json',
+                  paths.PACKAGE_DIR.parent / 'config.json']
     if getattr(sys, 'frozen', False):
         candidates.insert(0, Path(sys.executable).resolve().parent / 'config.json')
     return candidates
@@ -139,6 +128,14 @@ class Settings:
 
     def set_mode(self, mode):
         self._data['mode'] = mode
+        self._flush()
+
+    def cache_enabled(self):
+        """结果缓存开关。默认开启，省额度是主要收益。"""
+        return bool(self._data.get('cache_enabled', True))
+
+    def set_cache_enabled(self, enabled):
+        self._data['cache_enabled'] = bool(enabled)
         self._flush()
 
     def get(self, key, default=None):

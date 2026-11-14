@@ -11,7 +11,9 @@ __pycache__/
 # 打包
 build/
 dist/
+# PyInstaller 自动生成的 spec 不入库，但 build.spec 是手写的构建配置，需要保留
 *.spec
+!build.spec
 
 # 编辑器
 .idea/
